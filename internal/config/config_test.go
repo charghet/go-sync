@@ -11,9 +11,9 @@ func createTestConfig(p string) {
 	s := `repos:
  - path: /go-sync
    url: https://github.com/charghet/go-sync.git
-	 username: charghet
+	 username: user
    password: 123456
-   email: charghet@163.com`
+   email: user@example.com`
 	_, err := os.Stat(filepath.Dir(p))
 	if !os.IsExist(err) {
 		err = os.MkdirAll(filepath.Dir(p), 0755)
