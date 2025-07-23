@@ -1,0 +1,9 @@
+repos:
+ - path: test/git
+   url: https://github.com/example/example.git
+   branch: master
+   username: user
+   password: 123456
+   email: user@example.com
+   debounce: 2
+   
