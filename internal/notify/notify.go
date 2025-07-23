@@ -55,7 +55,10 @@ func (n *Notify) Add(p string) error {
 				if !ok {
 					return
 				}
-				logger.Info("Received event:", event, "for path:", event.Name)
+				if filepath.Base(event.Name) == ".git" {
+					continue
+				}
+				logger.Info("Notify Received event:", event, "for path:", event.Name)
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					time.Sleep(100 * time.Millisecond)
 					info, err := os.Stat(event.Name)

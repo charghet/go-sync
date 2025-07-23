@@ -7,64 +7,30 @@ import (
 	"github.com/charghet/go-sync/pkg/logger"
 	"github.com/go-git/go-git/v6"
 	gitConfig "github.com/go-git/go-git/v6/config"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 )
 
 type GitRepo struct {
-	RepoConfig   config.RepoConfig
-	CloneOption  *git.CloneOptions
-	PushOption   *git.PushOptions
-	CommitOption *git.CommitOptions
-	PullOption   *git.PullOptions
-	FetchOption  *git.FetchOptions
-	repo         *git.Repository
-	worktree     *git.Worktree
+	RepoConfig config.RepoConfig
+	repo       *git.Repository
+	worktree   *git.Worktree
+	Auth       *http.BasicAuth
 }
 
 func NewGitRepo(repoConfig config.RepoConfig) *GitRepo {
 	return &GitRepo{
 		RepoConfig: repoConfig,
-		CloneOption: &git.CloneOptions{
-			URL: repoConfig.Url,
-			Auth: &http.BasicAuth{
-				Username: repoConfig.Username,
-				Password: repoConfig.Password,
-			},
-		},
-		PushOption: &git.PushOptions{
-			Auth: &http.BasicAuth{
-				Username: repoConfig.Username,
-				Password: repoConfig.Password,
-			},
-		},
-		CommitOption: &git.CommitOptions{
-			Author: &object.Signature{
-				Name:  repoConfig.Username,
-				Email: repoConfig.Email,
-			},
-		},
-		PullOption: &git.PullOptions{
-			RemoteName: "origin",
-			// ReferenceName: plumbing.ReferenceName(repoConfig.Branch),
-			Auth: &http.BasicAuth{
-				Username: repoConfig.Username,
-				Password: repoConfig.Password,
-			},
-		},
-		FetchOption: &git.FetchOptions{
-			RemoteName: "origin",
-			Auth: &http.BasicAuth{
-				Username: repoConfig.Username,
-				Password: repoConfig.Password,
-			},
+		Auth: &http.BasicAuth{
+			Username: repoConfig.Username,
+			Password: repoConfig.Password,
 		},
 	}
 }
 
 func (r *GitRepo) Open() error {
 	var err error
-	init := false
 	r.repo, err = git.PlainOpen(r.RepoConfig.Path)
 
 	if err != nil {
@@ -75,7 +41,25 @@ func (r *GitRepo) Open() error {
 				logger.Fatal("Failed to init git repository:", r.RepoConfig.Path, "Error:", err)
 				return err
 			}
-			init = true
+			_, err = r.repo.CreateRemote(&gitConfig.RemoteConfig{
+				Name: "origin",
+				URLs: []string{r.RepoConfig.Url},
+			})
+			if err != nil {
+				logger.Fatal("Failed to create remote repository:", err)
+				return err
+			}
+			logger.Info("Created remote repository 'origin' for:", r.RepoConfig.Path)
+
+			err = r.repo.CreateBranch(&gitConfig.Branch{
+				Name:   r.RepoConfig.Branch,
+				Remote: "origin",
+				Merge:  plumbing.NewBranchReferenceName(r.RepoConfig.Branch),
+			})
+			if err != nil {
+				logger.Fatal("Failed to create branch:", r.RepoConfig.Branch, "Error:", err)
+				return err
+			}
 		}
 	}
 	if err != nil {
@@ -88,17 +72,6 @@ func (r *GitRepo) Open() error {
 		logger.Fatal("Failed to get worktree:", err)
 		return err
 	}
-	if init {
-		_, err = r.repo.CreateRemote(&gitConfig.RemoteConfig{
-			Name: "origin",
-			URLs: []string{r.RepoConfig.Url},
-		})
-		if err != nil {
-			logger.Fatal("Failed to create remote repository:", err)
-			return err
-		}
-		logger.Info("Created remote repository 'origin' for:", r.RepoConfig.Path)
-	}
 
 	err = r.Pull()
 	if err != nil {
@@ -109,6 +82,7 @@ func (r *GitRepo) Open() error {
 		logger.Fatal("Failed to commit after init:", err)
 		return err
 	}
+
 	if c {
 		err = r.Push()
 		if err != nil {
@@ -122,7 +96,10 @@ func (r *GitRepo) Open() error {
 
 func (r *GitRepo) Clone() error {
 	var err error
-	r.repo, err = git.PlainClone(r.RepoConfig.Path, r.CloneOption)
+	r.repo, err = git.PlainClone(r.RepoConfig.Path, &git.CloneOptions{
+		URL:  r.RepoConfig.Url,
+		Auth: r.Auth,
+	})
 	if err != nil {
 		logger.Danger("Failed to clone repository:", r.RepoConfig.Url)
 		return err
@@ -145,18 +122,27 @@ func (r *GitRepo) Commit(message string) (commit bool, err error) {
 		return false, nil
 	}
 	commit = true
-	r.CommitOption.Author.When = time.Now()
-	_, err = r.worktree.Commit(message, r.CommitOption)
+	h, err := r.worktree.Commit(message, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  r.RepoConfig.Username,
+			Email: r.RepoConfig.Email,
+			When:  time.Now(),
+		},
+	})
+
 	if err != nil {
 		logger.Danger("Failed to commit changes:", err)
 		return false, err
 	}
-	logger.Info("Committed changes with message:", message)
+	logger.Info("Committed changes:", h.String(), message)
 	return commit, nil
 }
 
 func (r *GitRepo) Push() error {
-	err := r.repo.Push(r.PushOption)
+	err := r.repo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		Auth:       r.Auth,
+	})
 	if err != nil {
 		if err == git.NoErrAlreadyUpToDate {
 			logger.Info("No changes to push, repository is up to date.")
@@ -170,7 +156,11 @@ func (r *GitRepo) Push() error {
 }
 
 func (r *GitRepo) Pull() error {
-	err := r.worktree.Pull(r.PullOption)
+	err := r.worktree.Pull(&git.PullOptions{
+		RemoteName:    "origin",
+		ReferenceName: plumbing.NewBranchReferenceName(r.RepoConfig.Branch),
+		Auth:          r.Auth,
+	})
 	if err != nil {
 		if err == git.NoErrAlreadyUpToDate {
 			logger.Info("No changes to pull, repository is up to date.")

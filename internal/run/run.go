@@ -38,15 +38,28 @@ func Run() error {
 		}
 
 		go func() {
+			timer := time.NewTimer(50 * time.Millisecond)
+			defer timer.Stop()
+			<-timer.C
 			for {
 				select {
 				case event, ok := <-n.Events:
 					if !ok {
 						return
 					}
+
+					timer.Stop()
+					timer.Reset(time.Duration(repo.RepoConfig.Debounce) * time.Second)
 					logger.Info("Received event:", event, "for path:", event.Name)
-					repo.Commit("auto commit in " + time.Now().Format("2006-01-02 15:04:05"))
-					repo.Push()
+				case <-timer.C:
+					logger.Info("Timer expired, committing changes.")
+					c, err := repo.Commit("auto commit in " + time.Now().Format("2006-01-02 15:04:05"))
+					if err != nil {
+						logger.Warn("Failed to commit changes:", err)
+					}
+					if c {
+						repo.Push()
+					}
 				case err, ok := <-n.Errors:
 					if !ok {
 						return
