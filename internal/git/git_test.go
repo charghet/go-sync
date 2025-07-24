@@ -44,3 +44,21 @@ func TestRevertFile(t *testing.T) {
 		return
 	}
 }
+
+func TestGetCommit(t *testing.T) {
+	config.SetPath("../../config.yaml")
+	r := NewGitRepo(config.GetConfig().Repos[0])
+	err := r.Open(false)
+	if err != nil {
+		t.Fatalf("Failed to open git repository: %v", err)
+		return
+	}
+	commit, total, err := r.GetCommit(1, 2)
+	if err != nil {
+		t.Fatal("Failed to get commit:", err)
+	}
+	t.Log("total:", total)
+	for _, c := range commit {
+		t.Log(c)
+	}
+}

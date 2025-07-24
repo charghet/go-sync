@@ -227,7 +227,6 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 
 	rct := plumbing.NewHash(hash)
 
-	// ... just iterates over the commits, printing it
 	foundHash := false
 	err = cIter.ForEach(func(c *object.Commit) error {
 		if c.Hash == rct {
@@ -273,4 +272,37 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 		logger.Warn("Commit hash not found:", hash)
 	}
 	return nil
+}
+
+type Commit struct {
+	Hash    string
+	Message string
+	Author  string
+	Date    time.Time
+	Email   string
+}
+
+func (r *GitRepo) GetCommit(pageIndex, pageSize int) (commits []Commit, total int, err error) {
+	until := time.Now()
+	cIter, err := r.repo.Log(&git.LogOptions{Until: &until})
+	if err != nil {
+		logger.Danger("Failed to get commit iterator:", err)
+		return nil, 0, err
+	}
+
+	start := (pageIndex - 1) * pageSize
+	end := pageIndex * pageSize
+	cIter.ForEach(func(c *object.Commit) error {
+		total += 1
+		if pageIndex == 0 || (total > start && total <= end) {
+			commits = append(commits, Commit{
+				Hash:   c.Hash.String(),
+				Author: c.Author.Name,
+				Date:   c.Author.When,
+				Email:  c.Author.Email,
+			})
+		}
+		return nil
+	})
+	return commits, total, nil
 }
