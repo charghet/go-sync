@@ -21,7 +21,7 @@ func Run() error {
 	}
 	for _, repoConfig := range repos {
 		repo := git.NewGitRepo(repoConfig)
-		err := repo.Open()
+		err := repo.Open(true)
 		if err != nil {
 			continue
 		}

@@ -1,10 +1,14 @@
 package git
 
 import (
+	"io"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/charghet/go-sync/internal/config"
 	"github.com/charghet/go-sync/pkg/logger"
+	"github.com/charghet/go-sync/pkg/util"
 	"github.com/go-git/go-git/v6"
 	gitConfig "github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
@@ -29,7 +33,7 @@ func NewGitRepo(repoConfig config.RepoConfig) *GitRepo {
 	}
 }
 
-func (r *GitRepo) Open() error {
+func (r *GitRepo) Open(pull bool) error {
 	var err error
 	r.repo, err = git.PlainOpen(r.RepoConfig.Path)
 
@@ -73,21 +77,23 @@ func (r *GitRepo) Open() error {
 		return err
 	}
 
-	err = r.Pull()
-	if err != nil {
-		logger.Fatal("Failed to pull changes after init:", err)
-	}
-	c, err := r.Commit("auto commit by init in " + time.Now().Format("2006-01-02 15:04:05"))
-	if err != nil {
-		logger.Fatal("Failed to commit after init:", err)
-		return err
-	}
-
-	if c {
-		err = r.Push()
+	if pull {
+		err = r.Pull()
 		if err != nil {
-			logger.Fatal("Failed to push after init:", err)
+			logger.Fatal("Failed to pull changes after init:", err)
+		}
+		c, err := r.Commit("auto commit by init in " + time.Now().Format("2006-01-02 15:04:05"))
+		if err != nil {
+			logger.Fatal("Failed to commit after init:", err)
 			return err
+		}
+
+		if c {
+			err = r.Push()
+			if err != nil {
+				logger.Fatal("Failed to push after init:", err)
+				return err
+			}
 		}
 	}
 
@@ -168,6 +174,103 @@ func (r *GitRepo) Pull() error {
 		}
 		logger.Danger("Failed to pull changes:", err)
 		return err
+	}
+	return nil
+}
+
+func (r *GitRepo) Checkout(hash string, files []string) error {
+	err := r.worktree.Checkout(&git.CheckoutOptions{
+		Hash:                      plumbing.NewHash(hash),
+		SparseCheckoutDirectories: files,
+	})
+	if err != nil {
+		logger.Danger("Failed to checkout:", hash, "Error:", err)
+		return err
+	}
+	logger.Info("Checked out:", hash, "with files:", files)
+	return nil
+}
+
+func (r *GitRepo) Restore(files []string) error {
+	err := r.worktree.Restore(&git.RestoreOptions{
+		Files: files,
+	})
+
+	if err != nil {
+		logger.Danger("Failed to restore files:", files, "Error:", err)
+		return err
+	}
+	logger.Info("Restored files:", files)
+	return nil
+}
+
+func (r *GitRepo) Reset(hash string, files []string) error {
+	err := r.worktree.Reset(&git.ResetOptions{
+		Commit: plumbing.NewHash(hash),
+		Files:  files,
+	})
+	if err != nil {
+		logger.Danger("Failed to reset to hash:", hash, "Error:", err)
+		return err
+	}
+	logger.Info("Reset worktree to hash:", hash)
+	return nil
+}
+
+func (r *GitRepo) RevertFile(hash string, files []string) error {
+	until := time.Now()
+	cIter, err := r.repo.Log(&git.LogOptions{Until: &until})
+	if err != nil {
+		logger.Danger("Failed to get commit iterator:", err)
+		return err
+	}
+
+	rct := plumbing.NewHash(hash)
+
+	// ... just iterates over the commits, printing it
+	foundHash := false
+	err = cIter.ForEach(func(c *object.Commit) error {
+		if c.Hash == rct {
+			foundHash = true
+			fi, err := c.Files()
+			if err != nil {
+				logger.Danger("Failed to get files from commit:", c.Hash, "Error:", err)
+				return err
+			}
+			fileSet := util.SliceToSet(files)
+			_, all := fileSet["."]
+			err = fi.ForEach(func(cf *object.File) error {
+				if _, e := fileSet[cf.Name]; all || e {
+					delete(fileSet, cf.Name)
+					fr, err := cf.Blob.Reader()
+					if err != nil {
+						logger.Danger("Failed to get file reader for:", cf.Name, "Error:", err)
+						return err
+					}
+					fw, err := os.Create(filepath.Join(r.RepoConfig.Path, cf.Name))
+					if err != nil {
+						logger.Danger("Failed to create file:", cf.Name, "Error:", err)
+						return err
+					}
+					io.Copy(fw, fr)
+					logger.Info("Reverted file:", cf.Name, "to commit:", c.Hash)
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			if !all && len(fileSet) > 0 {
+				logger.Warn("Some files were not found in commit:", c.Hash, "Files not found:", fileSet)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if !foundHash {
+		logger.Warn("Commit hash not found:", hash)
 	}
 	return nil
 }

@@ -9,7 +9,7 @@ import (
 func TestInit(t *testing.T) {
 	config.SetPath("../../config.yaml")
 	r := NewGitRepo(config.GetConfig().Repos[0])
-	err := r.Open()
+	err := r.Open(true)
 	if err != nil {
 		t.Fatalf("Failed to open git repository: %v", err)
 		return
@@ -26,5 +26,21 @@ func TestInit(t *testing.T) {
 			return
 		}
 	}
+}
 
+func TestRevertFile(t *testing.T) {
+	config.SetPath("../../config.yaml")
+	r := NewGitRepo(config.GetConfig().Repos[0])
+	err := r.Open(false)
+	if err != nil {
+		t.Fatalf("Failed to open git repository: %v", err)
+		return
+	}
+	h := "50f2c8891ad7d9cc0af6690ae0539aab160b99be"
+	files := []string{"."}
+	err = r.RevertFile(h, files)
+	if err != nil {
+		t.Fatalf("Failed to revert file: %v", err)
+		return
+	}
 }
