@@ -102,9 +102,8 @@ func addRecursiveWatch(watcher *fsnotify.Watcher, root string) error {
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			logger.Warn("Failed to walk path:", path, "Error:", err)
-			return nil // Continue walking
+			return nil
 		}
-		logger.Info("Walking path:", path)
 		if info.IsDir() {
 			if filepath.Base(path) == ".git" {
 				return filepath.SkipDir
