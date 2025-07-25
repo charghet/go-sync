@@ -9,7 +9,13 @@ import (
 )
 
 type Config struct {
+	User  UserConfig   `yaml:"user"`
 	Repos []RepoConfig `yaml:"repos"`
+}
+
+type UserConfig struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type RepoConfig struct {
@@ -55,4 +61,16 @@ func SetPath(p string) *Config {
 	path = p
 	toInit()
 	return config
+}
+
+func RepoInfo() []RepoConfig {
+	res := make([]RepoConfig, len(config.Repos))
+	for i, repo := range config.Repos {
+		res[i] = RepoConfig{
+			Path:   repo.Path,
+			Url:    repo.Url,
+			Branch: repo.Branch,
+		}
+	}
+	return res
 }

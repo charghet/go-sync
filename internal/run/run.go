@@ -10,17 +10,20 @@ import (
 	"github.com/charghet/go-sync/pkg/logger"
 )
 
-func Run() error {
+var Repos = make([]*git.GitRepo, len(config.GetConfig().Repos))
+
+func Run() {
 	logger.SetLogFile("run.log")
 	logger.Info("Starting go-sync...")
 
-	repos := config.GetConfig().Repos
-	if len(repos) == 0 {
+	r := config.GetConfig().Repos
+	if len(r) == 0 {
 		logger.Warn("No repositories configured, exiting.")
 		os.Exit(0)
 	}
-	for _, repoConfig := range repos {
+	for i, repoConfig := range r {
 		repo := git.NewGitRepo(repoConfig)
+		Repos[i] = repo
 		err := repo.Open(true)
 		if err != nil {
 			continue
@@ -69,6 +72,4 @@ func Run() error {
 			}
 		}()
 	}
-	<-make(chan struct{})
-	return nil
 }

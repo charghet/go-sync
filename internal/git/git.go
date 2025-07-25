@@ -1,6 +1,8 @@
 package git
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -260,7 +262,9 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 				return err
 			}
 			if !all && len(fileSet) > 0 {
-				logger.Warn("Some files were not found in commit:", c.Hash, "Files not found:", fileSet)
+				s := fmt.Sprintf("Some files were not found in commit:%v Files not found:%v", c.Hash, fileSet)
+				logger.Warn(s)
+				return errors.New(s)
 			}
 		}
 		return nil
@@ -269,7 +273,9 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 		return err
 	}
 	if !foundHash {
-		logger.Warn("Commit hash not found:", hash)
+		s := fmt.Sprintf("Commit hash not found:%v", hash)
+		logger.Warn(s)
+		return errors.New(s)
 	}
 	return nil
 }
@@ -296,10 +302,11 @@ func (r *GitRepo) GetCommit(pageIndex, pageSize int) (commits []Commit, total in
 		total += 1
 		if pageIndex == 0 || (total > start && total <= end) {
 			commits = append(commits, Commit{
-				Hash:   c.Hash.String(),
-				Author: c.Author.Name,
-				Date:   c.Author.When,
-				Email:  c.Author.Email,
+				Hash:    c.Hash.String(),
+				Message: c.Message,
+				Author:  c.Author.Name,
+				Date:    c.Author.When,
+				Email:   c.Author.Email,
 			})
 		}
 		return nil
