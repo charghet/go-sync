@@ -9,8 +9,14 @@ import (
 )
 
 type Config struct {
+	Server ServerConfig `yaml:"server"`
 	User  UserConfig   `yaml:"user"`
 	Repos []RepoConfig `yaml:"repos"`
+}
+
+type ServerConfig struct {
+	Host string `yaml:"host"`
+	Port int `yaml:"port"`
 }
 
 type UserConfig struct {
