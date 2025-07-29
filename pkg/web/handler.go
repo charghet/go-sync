@@ -63,7 +63,7 @@ func CookieHandler(c *gin.Context) {
 		_, err = util.ValidateJWT(token)
 	}
 	if err != nil {
-		c.JSON(401, Result{
+		c.JSON(200, Result{
 			Code: 401,
 			Msg:  "auth failed",
 			Data: c.Request.Host,

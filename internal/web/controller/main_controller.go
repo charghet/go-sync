@@ -31,7 +31,7 @@ func (c *MainController) Login(ctx *gin.Context) {
 		c.ResponseOkJson(ctx, token)
 		return
 	}
-	panic(web.ServiceErr{Code: 401, Msg: "username or password is incorrect"})
+	panic(web.ServiceErr{Code: 400, Msg: "username or password is incorrect"})
 }
 
 type RepoIdReq struct {
@@ -76,7 +76,7 @@ func (c *MainController) Revert(ctx *gin.Context) {
 		rr.File = []string{"."}
 	}
 	err := r.RevertFile(rr.Hash, rr.File)
-	web.CheckServiceErr(err, err.Error())
+	web.CheckServiceErr(err, "")
 	c.ResponseOkJson(ctx, "ok")
 }
 

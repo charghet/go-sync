@@ -5,7 +5,8 @@ user:
   username: user
   password: 123456
 repos:
- - path: test/git
+ - name: test
+   path: test/git
    url: https://github.com/example/example.git
    branch: master
    username: user

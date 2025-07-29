@@ -33,7 +33,6 @@ func Run() {
 		if err != nil {
 			continue
 		}
-		defer n.Close()
 
 		err = n.Add(repoConfig.Path)
 		if err != nil {

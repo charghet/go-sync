@@ -281,11 +281,11 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 }
 
 type Commit struct {
-	Hash    string
-	Message string
-	Author  string
-	Date    time.Time
-	Email   string
+	Hash    string `json:"hash"`
+	Message string `json:"message"`
+	Author  string `json:"author"`
+	Date    string `json:"date"`
+	Email   string `json:"email"`
 }
 
 func (r *GitRepo) GetCommit(pageIndex, pageSize int) (commits []Commit, total int, err error) {
@@ -305,7 +305,7 @@ func (r *GitRepo) GetCommit(pageIndex, pageSize int) (commits []Commit, total in
 				Hash:    c.Hash.String(),
 				Message: c.Message,
 				Author:  c.Author.Name,
-				Date:    c.Author.When,
+				Date:    c.Author.When.Format("2006-01-02 15:04:05"),
 				Email:   c.Author.Email,
 			})
 		}
