@@ -6,3 +6,6 @@ interface ImportMetaEnv {
 	readonly VITE_GLOB_OPEN_LONG_REPLY: string;
 	readonly VITE_GLOB_APP_PWA: string;
 }
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}

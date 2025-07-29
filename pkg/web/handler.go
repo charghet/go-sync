@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"runtime/debug"
+	"strings"
 
 	"github.com/charghet/go-sync/pkg/logger"
 	"github.com/charghet/go-sync/pkg/util"
@@ -54,7 +55,7 @@ func ErrorHandler(c *gin.Context) {
 }
 
 func CookieHandler(c *gin.Context) {
-	if c.Request.URL.Path == "/api/login" {
+	if !strings.HasPrefix(c.Request.URL.Path, "/api/") || c.Request.URL.Path == "/api/login" {
 		c.Next()
 		return
 	}

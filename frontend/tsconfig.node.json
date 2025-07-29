@@ -20,6 +20,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["vite/client", "node", "naive-ui/volar"],
   },
-  "include": ["vite.config.ts"]
+    "include": ["src/**/*.ts","*.ts", "src/**/*.tsx", "src/**/*.vue"]
 }
