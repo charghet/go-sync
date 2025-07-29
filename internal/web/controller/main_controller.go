@@ -77,12 +77,13 @@ func (c *MainController) Revert(ctx *gin.Context) {
 	}
 	err := r.RevertFile(rr.Hash, rr.File)
 	web.CheckServiceErr(err, "")
+	run.GetRunner().Ignore()
 	c.ResponseOkJson(ctx, "ok")
 }
 
 func getRepo(id int) *git.GitRepo {
-	if id <= 0 || id > len(run.Repos) {
+	if id <= 0 || id > len(run.GetRunner().Repos) {
 		panic(web.ServiceErr{Code: 300, Msg: "id not found"})
 	}
-	return run.Repos[id-1]
+	return run.GetRunner().Repos[id-1]
 }

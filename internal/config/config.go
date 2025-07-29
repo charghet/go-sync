@@ -12,6 +12,7 @@ type Config struct {
 	Server ServerConfig `yaml:"server"`
 	User   UserConfig   `yaml:"user"`
 	Repos  []RepoConfig `yaml:"repos"`
+	Ignore int          `yaml:"ignore"`
 }
 
 type ServerConfig struct {

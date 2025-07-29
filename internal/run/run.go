@@ -10,20 +10,35 @@ import (
 	"github.com/charghet/go-sync/pkg/logger"
 )
 
-var Repos = make([]*git.GitRepo, len(config.GetConfig().Repos))
+type Runner struct {
+	Repos       []*git.GitRepo
+	ignoreTimer *time.Timer
+}
 
-func Run() {
+var runner *Runner
+
+func GetRunner() *Runner {
+	if runner == nil {
+		runner = &Runner{
+			Repos:       make([]*git.GitRepo, len(config.GetConfig().Repos)),
+			ignoreTimer: time.NewTimer(100 * time.Millisecond),
+		}
+	}
+	return runner
+}
+
+func (r *Runner) Run() {
 	logger.SetLogFile("run.log")
 	logger.Info("Starting go-sync...")
 
-	r := config.GetConfig().Repos
-	if len(r) == 0 {
+	repos := config.GetConfig().Repos
+	if len(repos) == 0 {
 		logger.Warn("No repositories configured, exiting.")
 		os.Exit(0)
 	}
-	for i, repoConfig := range r {
+	for i, repoConfig := range repos {
 		repo := git.NewGitRepo(repoConfig)
-		Repos[i] = repo
+		r.Repos[i] = repo
 		err := repo.Open(true)
 		if err != nil {
 			continue
@@ -54,14 +69,21 @@ func Run() {
 					timer.Reset(time.Duration(repo.RepoConfig.Debounce) * time.Second)
 					logger.Info("Received event:", event, "for path:", event.Name)
 				case <-timer.C:
-					logger.Info("Timer expired, committing changes.")
-					c, err := repo.Commit("auto commit in " + time.Now().Format("2006-01-02 15:04:05"))
-					if err != nil {
-						logger.Warn("Failed to commit changes:", err)
+					select {
+					case <-r.ignoreTimer.C:
+						logger.Info("Timer expired, committing changes.")
+						c, err := repo.Commit("auto commit in " + time.Now().Format("2006-01-02 15:04:05"))
+						if err != nil {
+							logger.Warn("Failed to commit changes:", err)
+						}
+						if c {
+							repo.Push()
+						}
+						r.ignoreTimer.Reset(100 * time.Millisecond)
+					default:
+						logger.Debug("ignoreTimer not stop, skip..")
 					}
-					if c {
-						repo.Push()
-					}
+
 				case err, ok := <-n.Errors:
 					if !ok {
 						return
@@ -71,4 +93,9 @@ func Run() {
 			}
 		}()
 	}
+}
+
+func (r *Runner) Ignore() {
+	r.ignoreTimer.Stop()
+	r.ignoreTimer.Reset(time.Duration(config.GetConfig().Ignore) * time.Second)
 }

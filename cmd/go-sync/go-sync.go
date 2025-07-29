@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	run.Run()
+	run.GetRunner().Run()
 	web.StartUp()
 }
