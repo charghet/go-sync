@@ -4,8 +4,8 @@ import { fetchLogin } from '@/api';
 import { router } from '@/router'
 
 
-const username = ref('charghet')
-const password = ref('542312')
+const username = ref('')
+const password = ref('')
 
 async function toLogin() {
   await fetchLogin(username.value, password.value)

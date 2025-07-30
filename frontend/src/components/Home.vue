@@ -52,7 +52,6 @@ const columns = [
 
 async function getRepos() {
   repos.value = await fetchRepos()
-  console.log(repos.value)
 }
 
 async function getCommits() {
@@ -65,7 +64,6 @@ async function getCommits() {
     }
   })
   page.itemCount = commits.value.total
-  console.log(page)
   loading.value = false
 }
 
@@ -88,8 +86,9 @@ async function updatePage(p:number) {
   getCommits()
 }
 
-getRepos()
-getCommits()
+getRepos().then(() => {
+  getCommits()
+})
 </script>
 
 <template>
