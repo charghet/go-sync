@@ -1,5 +1,5 @@
-import { router } from '@/router'
 import axios,{type AxiosProgressEvent,type AxiosResponse,type GenericAbortSignal } from 'axios'
+import { router } from '@/router'
 
 export interface HttpOption {
   url: string

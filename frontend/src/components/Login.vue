@@ -1,4 +1,3 @@
-import { fetchLogin } from '../api/index'
 <script setup lang="ts">
 import { fetchLogin } from '@/api';
 import { router } from '@/router'

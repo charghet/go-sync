@@ -10,7 +10,7 @@ type BaseController struct {
 
 type Pager struct {
 	Index int `json:"index"`
-	Size int `json:"size"`
+	Size  int `json:"size"`
 }
 
 func (*BaseController) ResponseJson(ctx *gin.Context, code int, msg string, data interface{}) {
@@ -38,7 +38,7 @@ func (c *BaseController) BindParam(ctx *gin.Context, req interface{}) {
 
 func (c *BaseController) SetLogin(ctx *gin.Context, name string) string {
 	token, _ := util.GenerateJWT(name)
-	ctx.SetCookie("token", token, 3600, "/", "", false, true)
+	ctx.SetCookie("token", token, 21600, "/", "", false, true)
 	return token
 }
 
@@ -47,4 +47,3 @@ func (c *BaseController) GetLogin(ctx *gin.Context) string {
 	name, _ := util.ValidateJWT(token)
 	return name
 }
-

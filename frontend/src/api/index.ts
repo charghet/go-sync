@@ -53,3 +53,19 @@ export function fetchRevert(data: RevertReq): Promise<any> {
     data
   })
 }
+
+export interface ChangesReq {
+  id: number,
+  hash: string
+}
+export interface ChangesRes {
+    action: string,
+    name: string
+}
+
+export function fetchChanges(data: ChangesReq): Promise<ChangesRes[]> {
+  return post<ChangesRes[]>({
+    url: "/changes",
+    data
+  })
+}
