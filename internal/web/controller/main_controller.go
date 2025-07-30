@@ -48,10 +48,10 @@ type CommitsReq struct {
 }
 
 func (c *MainController) Commits(ctx *gin.Context) {
-	var cr CommitsReq
-	c.BindJSON(ctx, &cr)
-	r := getRepo(cr.Id)
-	commits, total, err := r.GetCommit(cr.Pager.Index, cr.Pager.Size)
+	var req CommitsReq
+	c.BindJSON(ctx, &req)
+	r := getRepo(req.Id)
+	commits, total, err := r.GetCommit(req.Pager.Index, req.Pager.Size)
 	web.CheckInnerErr(err, "can not get commits")
 	c.ResponseOkJson(ctx, struct {
 		Total int          `json:"total"`
@@ -69,16 +69,30 @@ type RevertReq struct {
 }
 
 func (c *MainController) Revert(ctx *gin.Context) {
-	var rr RevertReq
-	c.BindJSON(ctx, &rr)
-	r := getRepo(rr.Id)
-	if len(rr.File) == 0 {
-		rr.File = []string{"."}
+	var req RevertReq
+	c.BindJSON(ctx, &req)
+	r := getRepo(req.Id)
+	if len(req.File) == 0 {
+		req.File = []string{"."}
 	}
-	err := r.RevertFile(rr.Hash, rr.File)
+	err := r.RevertFile(req.Hash, req.File)
 	web.CheckServiceErr(err, "")
 	run.GetRunner().Ignore()
 	c.ResponseOkJson(ctx, "ok")
+}
+
+type ChangesReq struct {
+	RepoIdReq
+	Hash string `json:"hash"`
+}
+
+func (c *MainController) Changes(ctx *gin.Context) {
+	var req ChangesReq
+	c.BindJSON(ctx, &req)
+	r := getRepo(req.Id)
+	changes, err := r.GetChange(req.Hash)
+	web.CheckServiceErr(err, "")
+	c.ResponseOkJson(ctx, changes)
 }
 
 func getRepo(id int) *git.GitRepo {

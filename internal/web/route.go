@@ -36,6 +36,7 @@ func RegisterWebRoutes(router *gin.Engine, dist EmbedFS) {
 	router.POST(prefix+"/repos", c.Repos)
 	router.POST(prefix+"/commits", c.Commits)
 	router.POST(prefix+"/revert", c.Revert)
+	router.POST(prefix+"/changes", c.Changes)
 
 	sfs, err := fs.Sub(dist.FS, dist.Prefix)
 	if err != nil {

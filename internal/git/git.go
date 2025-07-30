@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
+	"github.com/go-git/go-git/v6/utils/merkletrie"
 )
 
 type GitRepo struct {
@@ -312,4 +313,70 @@ func (r *GitRepo) GetCommit(pageIndex, pageSize int) (commits []Commit, total in
 		return nil
 	})
 	return commits, total, nil
+}
+
+type Change struct {
+	Action string `json:"action"`
+	Name   string `json:"name"`
+}
+
+func (r *GitRepo) GetChange(hash string) ([]Change, error) {
+	commitHash := plumbing.NewHash(hash)
+	commit, err := r.repo.CommitObject(commitHash)
+	if err != nil {
+		logger.Danger("Failed to get commit:", err)
+		return nil, err
+	}
+
+	parentCommit, err := commit.Parents().Next()
+	if err != nil {
+		if err != io.EOF {
+			logger.Danger("Failed to get parent commit:", err)
+			return nil, err
+		}
+	}
+
+	var commitTree, parentTree *object.Tree
+	if parentCommit == nil {
+		parentTree = &object.Tree{}
+	} else {
+		parentTree, err = parentCommit.Tree()
+		if err != nil {
+			logger.Danger("Failed to get parent commit tree:", err)
+			return nil, err
+		}
+	}
+	commitTree, err = commit.Tree()
+	if err != nil {
+		logger.Danger("Failed to get commit tree:", err)
+		return nil, err
+	}
+
+	changes, err := parentTree.Diff(commitTree)
+	if err != nil {
+		logger.Danger("Failed to get changes:", err)
+		return nil, err
+	}
+	res := make([]Change, changes.Len())
+	for i, change := range changes {
+		action, err := change.Action()
+		if err != nil {
+			logger.Danger("Failed to get action:", err)
+			return nil, err
+		}
+		var c Change
+		switch action {
+		case merkletrie.Insert:
+			c.Action = "A"
+			c.Name = change.To.Name
+		case merkletrie.Modify:
+			c.Action = "M"
+			c.Name = change.To.Name
+		case merkletrie.Delete:
+			c.Action = "D"
+			c.Name = change.From.Name
+		}
+		res[i] = c
+	}
+	return res, nil
 }
