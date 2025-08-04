@@ -77,7 +77,7 @@ func (c *MainController) Revert(ctx *gin.Context) {
 	}
 	err := r.RevertFile(req.Hash, req.File)
 	web.CheckServiceErr(err, "")
-	run.GetRunner().Ignore()
+	run.GetRunner().Ignore(req.Id)
 	c.ResponseOkJson(ctx, "ok")
 }
 

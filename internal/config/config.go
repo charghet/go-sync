@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 
@@ -9,10 +10,12 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig `yaml:"server"`
-	User   UserConfig   `yaml:"user"`
-	Repos  []RepoConfig `yaml:"repos"`
-	Ignore int          `yaml:"ignore"`
+	Server   ServerConfig `yaml:"server"`
+	User     UserConfig   `yaml:"user"`
+	Repos    []RepoConfig `yaml:"repos"`
+	Ignore   *int         `yaml:"ignore"`
+	Pull     *bool        `yaml:"pull"`
+	Debounce *int         `yaml:"debounce" json:"debounce"`
 }
 
 type ServerConfig struct {
@@ -33,11 +36,74 @@ type RepoConfig struct {
 	Username string `yaml:"username" json:"username"`
 	Password string `yaml:"password" json:"password"`
 	Email    string `yaml:"email" json:"email"`
-	Debounce int    `yaml:"debounce" json:"debounce"` // 防抖时间 秒
+	Ignore   *int   `yaml:"ignore"`
+	Pull     *bool  `yaml:"pull"`
+	Debounce *int   `yaml:"debounce" json:"debounce"` // 防抖时间 秒
 }
 
 var path = "config.yaml"
 var config *Config
+
+func SetDefaultConfig(con *Config) {
+	if con.Ignore == nil {
+		i := 3
+		con.Ignore = &i
+	}
+
+	if con.Server.Host == "" {
+		con.Server.Host = "127.0.0.1"
+	}
+	if con.Server.Port == 0 {
+		con.Server.Port = 2222
+	}
+
+	if con.User.Username == "" {
+		con.User.Username = "admin"
+	}
+	if con.User.Password == "" {
+		con.User.Password = "admin123"
+	}
+
+	for i := range con.Repos {
+		r := &con.Repos[i]
+		if r.Name == "" {
+			r.Name = r.Path
+		}
+		if r.Branch == "" {
+			r.Branch = "master"
+		}
+		if r.Email == "" {
+			r.Email = "go-sync@example.com"
+		}
+
+		if r.Ignore == nil {
+			if con.Ignore == nil {
+				i := 3
+				r.Ignore = &i
+			} else {
+				r.Ignore = con.Ignore
+			}
+		}
+
+		if r.Debounce == nil {
+			if con.Debounce == nil {
+				i := 3
+				r.Debounce = &i
+			} else {
+				r.Debounce = con.Debounce
+			}
+		}
+
+		if r.Pull == nil {
+			if con.Pull == nil {
+				p := true
+				r.Pull = &p
+			} else {
+				r.Pull = con.Pull
+			}
+		}
+	}
+}
 
 func toInit() {
 	if config != nil {
@@ -58,6 +124,10 @@ func toInit() {
 		logger.Warn("Failed to get absolute path of config file:", err)
 	}
 	logger.Info("loaded config:", abs)
+
+	SetDefaultConfig(config)
+	b, _ := json.Marshal(config)
+	logger.Debug("config:", string(b))
 }
 
 func GetConfig() *Config {

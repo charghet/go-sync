@@ -1,10 +1,12 @@
+pull: true
 ignore: 3
+debounce: 2
 server:
   host: 127.0.0.1
-  port: 1212
+  port: 2222
 user:
-  username: user
-  password: 123456
+  username: admin
+  password: admin123
 repos:
  - name: test
    path: test/git
@@ -13,5 +15,7 @@ repos:
    username: user
    password: 123456
    email: user@example.com
+   pull: true
+   ignore: 3
    debounce: 2
    

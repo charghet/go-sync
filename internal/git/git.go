@@ -42,10 +42,10 @@ func (r *GitRepo) Open(pull bool) error {
 
 	if err != nil {
 		if err == git.ErrRepositoryNotExists {
-			logger.Info("Repository does not exist, initing:", r.RepoConfig.Url)
+			logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Repository does not exist, initing:", r.RepoConfig.Url)
 			r.repo, err = git.PlainInit(r.RepoConfig.Path, false)
 			if err != nil {
-				logger.Fatal("Failed to init git repository:", r.RepoConfig.Path, "Error:", err)
+				logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to init git repository:", r.RepoConfig.Path, "Error:", err)
 				return err
 			}
 			_, err = r.repo.CreateRemote(&gitConfig.RemoteConfig{
@@ -53,10 +53,10 @@ func (r *GitRepo) Open(pull bool) error {
 				URLs: []string{r.RepoConfig.Url},
 			})
 			if err != nil {
-				logger.Fatal("Failed to create remote repository:", err)
+				logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to create remote repository:", err)
 				return err
 			}
-			logger.Info("Created remote repository 'origin' for:", r.RepoConfig.Path)
+			logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Created remote repository 'origin' for:", r.RepoConfig.Path)
 
 			err = r.repo.CreateBranch(&gitConfig.Branch{
 				Name:   r.RepoConfig.Branch,
@@ -64,37 +64,37 @@ func (r *GitRepo) Open(pull bool) error {
 				Merge:  plumbing.NewBranchReferenceName(r.RepoConfig.Branch),
 			})
 			if err != nil {
-				logger.Fatal("Failed to create branch:", r.RepoConfig.Branch, "Error:", err)
+				logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to create branch:", r.RepoConfig.Branch, "Error:", err)
 				return err
 			}
 		}
 	}
 	if err != nil {
-		logger.Fatal("Failed to open git repository:", err)
+		logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to open git repository:", err)
 		return err
 	}
 
 	r.worktree, err = r.repo.Worktree()
 	if err != nil {
-		logger.Fatal("Failed to get worktree:", err)
+		logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get worktree:", err)
 		return err
 	}
 
 	if pull {
 		err = r.Pull()
 		if err != nil {
-			logger.Fatal("Failed to pull changes after init:", err)
+			logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to pull changes after init:", err)
 		}
 		c, err := r.Commit("auto commit by init in " + time.Now().Format("2006-01-02 15:04:05"))
 		if err != nil {
-			logger.Fatal("Failed to commit after init:", err)
+			logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to commit after init:", err)
 			return err
 		}
 
 		if c {
 			err = r.Push()
 			if err != nil {
-				logger.Fatal("Failed to push after init:", err)
+				logger.Fatal(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to push after init:", err)
 				return err
 			}
 		}
@@ -110,7 +110,7 @@ func (r *GitRepo) Clone() error {
 		Auth: r.Auth,
 	})
 	if err != nil {
-		logger.Danger("Failed to clone repository:", r.RepoConfig.Url)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to clone repository:", r.RepoConfig.Url)
 		return err
 	}
 	return nil
@@ -119,15 +119,15 @@ func (r *GitRepo) Clone() error {
 func (r *GitRepo) Commit(message string) (commit bool, err error) {
 	_, err = r.worktree.Add(".")
 	if err != nil {
-		logger.Danger("Failed to add changes to worktree:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to add changes to worktree:", err)
 	}
 	status, err := r.worktree.Status()
 	if err != nil {
-		logger.Danger("Failed to get worktree status:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get worktree status:", err)
 		return false, err
 	}
 	if status.IsClean() {
-		logger.Info("No changes to commit, worktree is clean.")
+		logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "No changes to commit, worktree is clean.")
 		return false, nil
 	}
 	commit = true
@@ -140,10 +140,10 @@ func (r *GitRepo) Commit(message string) (commit bool, err error) {
 	})
 
 	if err != nil {
-		logger.Danger("Failed to commit changes:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to commit changes:", err)
 		return false, err
 	}
-	logger.Info("Committed changes:", h.String(), message)
+	logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Committed changes:", h.String(), message)
 	return commit, nil
 }
 
@@ -154,13 +154,13 @@ func (r *GitRepo) Push() error {
 	})
 	if err != nil {
 		if err == git.NoErrAlreadyUpToDate {
-			logger.Info("No changes to push, repository is up to date.")
+			logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "No changes to push, repository is up to date.")
 			return nil
 		}
-		logger.Danger("Failed to push changes:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to push changes:", err)
 		return err
 	}
-	logger.Info("Pushed changes to remote repository: ", r.RepoConfig.Url)
+	logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Pushed changes to remote repository: ", r.RepoConfig.Url)
 	return nil
 }
 
@@ -172,10 +172,10 @@ func (r *GitRepo) Pull() error {
 	})
 	if err != nil {
 		if err == git.NoErrAlreadyUpToDate {
-			logger.Info("No changes to pull, repository is up to date.")
+			logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "No changes to pull, repository is up to date.")
 			return nil
 		}
-		logger.Danger("Failed to pull changes:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to pull changes:", err)
 		return err
 	}
 	return nil
@@ -187,10 +187,10 @@ func (r *GitRepo) Checkout(hash string, files []string) error {
 		SparseCheckoutDirectories: files,
 	})
 	if err != nil {
-		logger.Danger("Failed to checkout:", hash, "Error:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to checkout:", hash, "Error:", err)
 		return err
 	}
-	logger.Info("Checked out:", hash, "with files:", files)
+	logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Checked out:", hash, "with files:", files)
 	return nil
 }
 
@@ -200,10 +200,10 @@ func (r *GitRepo) Restore(files []string) error {
 	})
 
 	if err != nil {
-		logger.Danger("Failed to restore files:", files, "Error:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to restore files:", files, "Error:", err)
 		return err
 	}
-	logger.Info("Restored files:", files)
+	logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Restored files:", files)
 	return nil
 }
 
@@ -213,10 +213,10 @@ func (r *GitRepo) Reset(hash string, files []string) error {
 		Files:  files,
 	})
 	if err != nil {
-		logger.Danger("Failed to reset to hash:", hash, "Error:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to reset to hash:", hash, "Error:", err)
 		return err
 	}
-	logger.Info("Reset worktree to hash:", hash)
+	logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Reset worktree to hash:", hash)
 	return nil
 }
 
@@ -224,7 +224,7 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 	until := time.Now()
 	cIter, err := r.repo.Log(&git.LogOptions{Until: &until})
 	if err != nil {
-		logger.Danger("Failed to get commit iterator:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get commit iterator:", err)
 		return err
 	}
 
@@ -236,7 +236,7 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 			foundHash = true
 			fi, err := c.Files()
 			if err != nil {
-				logger.Danger("Failed to get files from commit:", c.Hash, "Error:", err)
+				logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get files from commit:", c.Hash, "Error:", err)
 				return err
 			}
 			fileSet := util.SliceToSet(files)
@@ -246,16 +246,16 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 					delete(fileSet, cf.Name)
 					fr, err := cf.Blob.Reader()
 					if err != nil {
-						logger.Danger("Failed to get file reader for:", cf.Name, "Error:", err)
+						logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get file reader for:", cf.Name, "Error:", err)
 						return err
 					}
 					fw, err := os.Create(filepath.Join(r.RepoConfig.Path, cf.Name))
 					if err != nil {
-						logger.Danger("Failed to create file:", cf.Name, "Error:", err)
+						logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to create file:", cf.Name, "Error:", err)
 						return err
 					}
 					io.Copy(fw, fr)
-					logger.Info("Reverted file:", cf.Name, "to commit:", c.Hash)
+					logger.Info(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Reverted file:", cf.Name, "to commit:", c.Hash)
 				}
 				return nil
 			})
@@ -264,7 +264,7 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 			}
 			if !all && len(fileSet) > 0 {
 				s := fmt.Sprintf("Some files were not found in commit:%v Files not found:%v", c.Hash, fileSet)
-				logger.Warn(s)
+				logger.Warn(fmt.Sprintf("[%v]", r.RepoConfig.Name), s)
 				return errors.New(s)
 			}
 		}
@@ -275,7 +275,7 @@ func (r *GitRepo) RevertFile(hash string, files []string) error {
 	}
 	if !foundHash {
 		s := fmt.Sprintf("Commit hash not found:%v", hash)
-		logger.Warn(s)
+		logger.Warn(fmt.Sprintf("[%v]", r.RepoConfig.Name), s)
 		return errors.New(s)
 	}
 	return nil
@@ -293,7 +293,7 @@ func (r *GitRepo) GetCommit(pageIndex, pageSize int) (commits []Commit, total in
 	until := time.Now()
 	cIter, err := r.repo.Log(&git.LogOptions{Until: &until})
 	if err != nil {
-		logger.Danger("Failed to get commit iterator:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get commit iterator:", err)
 		return nil, 0, err
 	}
 
@@ -324,14 +324,14 @@ func (r *GitRepo) GetChange(hash string) ([]Change, error) {
 	commitHash := plumbing.NewHash(hash)
 	commit, err := r.repo.CommitObject(commitHash)
 	if err != nil {
-		logger.Danger("Failed to get commit:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get commit:", err)
 		return nil, err
 	}
 
 	parentCommit, err := commit.Parents().Next()
 	if err != nil {
 		if err != io.EOF {
-			logger.Danger("Failed to get parent commit:", err)
+			logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get parent commit:", err)
 			return nil, err
 		}
 	}
@@ -342,26 +342,26 @@ func (r *GitRepo) GetChange(hash string) ([]Change, error) {
 	} else {
 		parentTree, err = parentCommit.Tree()
 		if err != nil {
-			logger.Danger("Failed to get parent commit tree:", err)
+			logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get parent commit tree:", err)
 			return nil, err
 		}
 	}
 	commitTree, err = commit.Tree()
 	if err != nil {
-		logger.Danger("Failed to get commit tree:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get commit tree:", err)
 		return nil, err
 	}
 
 	changes, err := parentTree.Diff(commitTree)
 	if err != nil {
-		logger.Danger("Failed to get changes:", err)
+		logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get changes:", err)
 		return nil, err
 	}
 	res := make([]Change, changes.Len())
 	for i, change := range changes {
 		action, err := change.Action()
 		if err != nil {
-			logger.Danger("Failed to get action:", err)
+			logger.Danger(fmt.Sprintf("[%v]", r.RepoConfig.Name), "Failed to get action:", err)
 			return nil, err
 		}
 		var c Change
