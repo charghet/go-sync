@@ -3,3 +3,4 @@ build
 *.log
 config.yaml
 *.exe
+deploy.bat
