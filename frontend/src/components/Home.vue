@@ -6,6 +6,7 @@ import { NButton, NSpace, type DataTableColumns, type PaginationProps } from 'na
 
 const repos = ref()
 const id = ref(1)
+const hash = ref('')
 const loading = ref(false)
 const drawer = reactive({
   show:false,
@@ -112,6 +113,15 @@ async function toRevert(row: Commit) {
   window.$message?.success("恢复成功")
 }
 
+async function toRevertFile(name: string) {
+  await fetchRevert({
+    id: id.value,
+    hash: hash.value,
+    file: [name]
+  })
+  window.$message?.success("恢复成功")
+}
+
 async function update(value: number) {
   id.value = value + 1
   getCommits()
@@ -127,9 +137,10 @@ async function getChanges(row: Commit) {
     id: id.value,
     hash: row.hash
   })
-  drawer.show = true
   drawer.title = shortHash(row.hash)
   changes.value = res
+  hash.value = row.hash
+  drawer.show = true
 }
 
 getRepos().then(() => {
@@ -156,9 +167,11 @@ getRepos().then(() => {
     <n-drawer-content :title="drawer.title">
       <n-list>
         <n-list-item v-for="item in changes">
-          <n-thing>
-            {{ item.action }} {{ item.name }}
-          </n-thing>
+          <n-space align="center">
+            <p style="font-size: 15px;">{{ item.action }}</p>
+            <p style="font-size: 15px;">{{ item.name }}</p> 
+            <n-button type="primary" size="small" @click="toRevertFile(item.name)">恢复</n-button>
+          </n-space>
         </n-list-item> 
       </n-list>
     </n-drawer-content>
